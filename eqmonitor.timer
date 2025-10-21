@@ -1,0 +1,8 @@
+[Unit]
+Description=Start P2PQuake Receiver every hour
+
+[Timer]
+OnCalendar=hourly
+
+[Install]
+WantedBy=timers.target

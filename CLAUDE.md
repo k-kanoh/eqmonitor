@@ -40,6 +40,9 @@ python mon.py --output-dir my_data
 # オプション組み合わせ例
 python mon.py --env prod --ignore 3 --output-dir ./earthquake_data
 
+# systemd使用時（本番環境、震度3以下を音声再生しない、JSON出力を抑制）
+python mon.py --env prod --ignore 3 --quiet
+
 # コードフォーマット（Ruff使用）
 ruff format .
 ruff format --check .
@@ -48,6 +51,55 @@ ruff format --check .
 ruff check .
 ruff check --fix .
 ```
+
+## systemd Timer Setup（推奨）
+
+systemdのユーザーモードとタイマーを使用してバックグラウンドで実行する方法：
+
+**前提条件:**
+- 管理者がユーザー作成時に `loginctl enable-linger kkano` を実行済み
+- これにより、kkanoユーザーはログインなしでもユーザーサービスが起動可能
+
+**セットアップ手順（sudo不要）:**
+
+```bash
+# ユーザー用ディレクトリ作成
+mkdir -p ~/.config/systemd/user/
+
+# ファイルをコピー
+cp eqmonitor.service ~/.config/systemd/user/
+cp eqmonitor.timer ~/.config/systemd/user/
+
+# タイマーを有効化して起動
+systemctl --user enable eqmonitor.timer
+systemctl --user start eqmonitor.timer
+
+# タイマーの状態確認
+systemctl --user status eqmonitor.timer
+systemctl --user list-timers
+
+# サービスの状態確認
+systemctl --user status eqmonitor
+
+# タイマーを停止
+systemctl --user stop eqmonitor.timer
+
+# サービスを停止（手動停止）
+systemctl --user stop eqmonitor
+```
+
+**systemdタイマーの動作:**
+- 毎時0分にmon.pyの起動を試みる
+- mon.pyが稼働中→ 何もしない（既存プロセス続行）
+- mon.pyが停止中→ mon.pyを起動
+- sudo不要（kkanoユーザーの権限で完結）
+- reboot後もログインなしで自動起動（次の毎時0分に実行）
+
+**設定内容:**
+- 本番環境（`--env prod`）に接続
+- 震度3以下は音声再生しない（`--ignore 3`）
+- JSON詳細出力を抑制（`--quiet`）
+- ログは `mon.log` に出力（stdout/stderrの両方）
 
 ## Architecture
 

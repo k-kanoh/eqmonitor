@@ -1,0 +1,11 @@
+[Unit]
+Description=P2PQuake WebSocket Receiver
+
+[Service]
+Type=simple
+WorkingDirectory=/home/kkano/eqmonitor
+ExecStart=/home/kkano/eqmonitor/venv/bin/python -u /home/kkano/eqmonitor/mon.py --env prod --ignore 3 --quiet
+Restart=no
+
+StandardOutput=append:/home/kkano/eqmonitor/mon.log
+StandardError=append:/home/kkano/eqmonitor/mon.log

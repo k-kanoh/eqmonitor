@@ -16,6 +16,17 @@ import websockets
 
 
 class P2PQuakeReceiver:
+    # コード番号から名称へのマッピング
+    CODE_NAMES = {
+        551: "JMAQuake",
+        552: "JMATsunami",
+        554: "EEWDetection",
+        555: "Areapeers",
+        556: "EEW",
+        561: "Userquake",
+        9611: "UserquakeEvaluation",
+    }
+
     # maxScale値からWAVファイル名へのマッピング
     # 10=1, 20=2, 30=3, 40=4, 45=5弱, 50=5強, 55=6弱, 60=6強, 70=7
     SCALE_TO_WAV = {
@@ -43,12 +54,13 @@ class P2PQuakeReceiver:
         "7": 70,
     }
 
-    def __init__(self, output_dir="data", ignore_scale=None, env=None):
+    def __init__(self, output_dir="data", ignore_scale=None, env=None, quiet=False):
         """
         Args:
             output_dir: JSON保存先ディレクトリ
             ignore_scale: この震度以下を音声再生しない（例: "4", "5-"）。Noneの場合は全て再生
             env: 接続環境。"prod"で本番環境、Noneでサンドボックス環境
+            quiet: Trueの場合、受信したJSONを表示しない（デフォルト: False）
         """
         # 環境に応じてURIを設定
         if env == "prod":
@@ -61,6 +73,7 @@ class P2PQuakeReceiver:
         self.output_dir = output_dir
         self.wav_dir = "wav"
         self.ignore_scale = ignore_scale
+        self.quiet = quiet
         self.ensure_output_dir()
 
     def ensure_output_dir(self):
@@ -249,15 +262,24 @@ class P2PQuakeReceiver:
                         # JSONとしてパース
                         data = json.loads(message)
 
-                        # コンソールに表示
+                        # メッセージタイプを取得
+                        code = data.get("code")
+                        code_name = self.CODE_NAMES.get(code, f"code={code}")
+
+                        # 受信ログを表示（quietモードでも表示）
                         print(
-                            f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Received message:"
+                            f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] Received "{code_name}" message'
                         )
-                        print(json.dumps(data, ensure_ascii=False, indent=2))
+
+                        # JSONの詳細を表示（quietモードでは非表示）
+                        if not self.quiet:
+                            print(json.dumps(data, ensure_ascii=False, indent=2))
 
                         # データ処理（音声再生・ファイル保存）
                         self.process_data(data)
-                        print("-" * 50)
+
+                        if not self.quiet:
+                            print("-" * 50)
 
                     except json.JSONDecodeError as e:
                         print(f"JSON decode error: {e}", file=sys.stderr)
@@ -303,6 +325,11 @@ async def main():
         choices=["prod"],
         help="接続環境 (prod: 本番環境, 未指定: サンドボックス環境)",
     )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="受信したJSONを表示しない（デバッグログのみ出力）",
+    )
 
     args = parser.parse_args()
 
@@ -310,6 +337,7 @@ async def main():
         output_dir=args.output_dir,
         ignore_scale=args.ignore,
         env=args.env,
+        quiet=args.quiet,
     )
     await receiver.receive_messages()
 
