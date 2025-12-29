@@ -1,0 +1,22 @@
+services:
+  postgresql:
+    image: postgres:18
+    user: "9066:9066"
+    environment:
+      POSTGRES_PASSWORD: passw0rd
+      POSTGRES_USER: admin
+      POSTGRES_DB: eqmon
+      TZ: Asia/Tokyo
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale-provider=icu --icu-locale=ja-JP"
+    volumes:
+      - ./db:/var/lib/postgresql
+    ports:
+      - "5814:5432"
+    restart: unless-stopped
+
+  voicevox:
+    image: voicevox/voicevox_engine:cpu-ubuntu24.04-0.26.0-dev
+    command: --cors_policy_mode all
+    ports:
+      - "50021:50021"
+    restart: unless-stopped
