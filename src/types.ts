@@ -24,6 +24,7 @@ export interface EEW extends BasicData {
   code: 556;
   areas: Array<{
     name: string;
+    pref: string;
     scaleFrom: number;
     scaleTo: number;
   }>;

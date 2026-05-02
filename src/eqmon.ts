@@ -1,6 +1,7 @@
 import "dotenv/config";
 import "./date-extensions.js";
 import { spawn } from "child_process";
+import { readFileSync } from "fs";
 import { join } from "path";
 import { setTimeout as sleep } from "timers/promises";
 import { program } from "commander";
@@ -13,6 +14,15 @@ import type { EEW, EventData, JMAQuake, UserquakeEvaluation } from "./types.js";
 
 const PROJECT_ROOT = join(import.meta.dirname, "..");
 
+function resolveAreaCodes(pref: string): string[] {
+  const csv = readFileSync(join(PROJECT_ROOT, "epsp-area.csv"), "utf-8");
+  return csv
+    .split("\n")
+    .map((line) => line.split(","))
+    .filter((cols) => cols.length >= 4 && cols[3] === pref)
+    .map((cols) => cols[0]);
+}
+
 interface ReceiverOptions {
   env?: string;
   silent?: string;
@@ -24,12 +34,14 @@ class P2PQuakeReceiver {
   private envName: string;
   private silent?: string;
   private quiet: boolean;
+  private homePref?: string;
   private detectAreas: string[];
   private lastJMAQuake?: { eqTime: string; pref: string; scale: number };
   private lastUqe?: { started_at: string };
 
   constructor(options: ReceiverOptions) {
-    this.detectAreas = process.env.DETECT_AREA ? process.env.DETECT_AREA.split(",") : [];
+    this.homePref = process.env.HOME_PREF;
+    this.detectAreas = this.homePref ? resolveAreaCodes(this.homePref) : [];
 
     switch (options.env) {
       case "prod":
@@ -153,7 +165,8 @@ class P2PQuakeReceiver {
           const [voicePath] = await Promise.all([generateEewFollowupVoice(scale), sleep(500)]);
           this.playSound(voicePath);
         } else {
-          this.playSound(join(PROJECT_ROOT, "wav/eew1.wav"));
+          const isHomeArea = this.homePref != null && eew.areas.some((a) => a.pref === this.homePref);
+          this.playSound(join(PROJECT_ROOT, `wav/${isHomeArea ? "warn.wav" : "eew1.wav"}`));
           const [voicePath] = await Promise.all([generateEewVoice(area, scale), sleep(2000)]);
           this.playSound(voicePath);
         }

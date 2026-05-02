@@ -30,11 +30,10 @@ cp .env_example .env
 `.env` の内容
 ```
 DATABASE_URL=postgresql://admin:passw0rd@localhost:5814/eqmon
-DETECT_AREA=460,465
+HOME_PREF=大阪
 ```
 - `DATABASE_URL`: PostgreSQLの接続文字列(compose.ymlに合わせる)
-- `DETECT_AREA`: 地震検知通知を受け取る地域コード(カンマ区切り)
-  - 地域コードは[epsp-area.csv](https://github.com/p2pquake/epsp-specifications/blob/master/epsp-area.csv)を参照
+- `HOME_PREF`: 居住地の都道府県名(EEWで当該府県が対象エリアに含まれる場合、`warn.wav` が再生されます)
 
 ### 2. データベースとVOICEVOXの起動
 ```bash
